@@ -1,0 +1,13 @@
+gradio==6.15.2
+litellm==1.87.1
+langchain==0.2.5
+langchain-chroma==0.1.2
+langchain-community==0.2.5
+langchain-core==0.2.10
+langchain-huggingface==0.0.3
+langchain-text-splitters==0.2.2
+pypdf==4.2.0
+pandas==2.3.3
+python-dotenv==1.0.1
+sentence-transformers==3.0.1
+chromadb==0.5.3
