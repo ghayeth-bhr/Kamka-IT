@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://openrouter.ai/api/v1"
     embeddings_model: str = "all-MiniLM-L6-v2"
     cors_origins: str = "http://localhost:3000"
-    chunk_size: int = 800
+    chunk_size: int = 1667
     chunk_overlap: int = 100
-    retriever_k: int = 6
+    retriever_k: int = 3
 
     def cors_origins_list(self) -> list[str]:
         parts = [v.strip() for v in self.cors_origins.split(",") if v.strip()]

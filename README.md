@@ -1,59 +1,134 @@
 # RAG Assistant
 
-## Overview
-Document-grounded AI assistant built with a LangChain tool-calling agent, Chroma
-vector store, and the all-MiniLM-L6-v2 embeddings model. The backend is FastAPI
-and the frontend is Next.js with Tailwind CSS. The LLM is served via OpenRouter
-using the GPT-4o-mini free tier by default.
+Document-grounded AI assistant with a LangChain tool-calling agent, Chroma vector store, and the all-MiniLM-L6-v2 embeddings model. The LLM is served via OpenRouter (GPT-4o-mini free tier by default).
+
+---
 
 ## Prerequisites
+
 - Python 3.11+
 - Node.js 18+
-- An OpenRouter API key
+- [OpenRouter API key](https://openrouter.ai/keys) (free tier available)
 
-## Setup
+---
+
+## Quick Start — Docker
+
+```bash
+git clone <repo-url> kamka
+cd kamka
+
+# Create .env files
+cp backend/.env.example .env
+cp .env backend/.env
+
+# Edit .env — set OPENROUTER_API_KEY
+```
+
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API docs: http://localhost:8000/docs
+
+---
+
+## Manual Setup
 
 ### Backend
+
+```bash
 cd backend
 cp .env.example .env
-# fill in OPENROUTER_API_KEY
+# Edit .env — set OPENROUTER_API_KEY
+
+python -m venv venv
+# venv\Scripts\activate   (Windows)
+# source venv/bin/activate (macOS/Linux)
+
+pip install --index-url https://download.pytorch.org/whl/cpu torch==2.3.1+cpu
 pip install -r requirements.txt
+
 uvicorn app.main:app --reload --port 8000
+```
 
 ### Frontend
+
+```bash
 cd frontend
 cp .env.local.example .env.local
-# NEXT_PUBLIC_API_URL=http://localhost:8000
 npm install
 npm run dev
+```
+
+Opens at http://localhost:3000.
+
+---
 
 ## Environment Variables
-| Variable | Required | Description |
-| --- | --- | --- |
-| OPENROUTER_API_KEY | yes | OpenRouter API key for the LLM |
-| HF_TOKEN | no | Hugging Face token (only for gated models) |
-| LLM_MODEL | no | OpenRouter model name (default: openai/gpt-4o-mini) |
-| LLM_BASE_URL | no | OpenRouter base URL |
-| EMBEDDINGS_MODEL | no | Embeddings model name (default: all-MiniLM-L6-v2) |
-| CORS_ORIGINS | no | Comma-separated allowed CORS origins |
-| NEXT_PUBLIC_API_URL | yes (frontend) | Backend base URL for the UI |
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `OPENROUTER_API_KEY` | **Yes** | — | OpenRouter API key for LLM access |
+| `LLM_MODEL` | No | `openai/gpt-4o-mini` | OpenRouter model identifier |
+| `LLM_BASE_URL` | No | `https://openrouter.ai/api/v1` | API base URL |
+| `EMBEDDINGS_MODEL` | No | `all-MiniLM-L6-v2` | Sentence-transformer model for embeddings |
+| `HF_TOKEN` | No | — | Hugging Face token (for gated models only) |
+| `CORS_ORIGINS` | No | `http://localhost:3000` | Comma-separated allowed CORS origins |
+| `NEXT_PUBLIC_API_URL` | **Yes** (frontend) | — | Backend URL for the Next.js client |
+
+---
+
+## Project Structure
+
+```
+kamka/
+├── .env                          # Shared env vars
+├── docker-compose.yml            # Backend + frontend
+├── backend/
+│   ├── .env.example
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── app/
+│       ├── main.py               # FastAPI entry point
+│       ├── config.py             # Pydantic settings
+│       ├── api/routes/           # Chat & document upload endpoints
+│       ├── core/agent/           # LangChain tool-calling agent
+│       ├── core/rag/             # Ingestion, retrieval, prompts
+│       ├── core/store/           # Chroma vector store wrapper
+│       └── models/               # Pydantic schemas
+└── frontend/
+    ├── Dockerfile
+    ├── package.json
+    └── src/
+        ├── app/                  # Next.js App Router
+        ├── components/           # Chat, upload, message UI
+        ├── hooks/                # useChat custom hook
+        └── lib/                  # API client, types
+```
+
+---
+
+## Usage
+
+1. Open http://localhost:3000
+2. Upload a PDF or .txt document via the upload panel
+3. Ask questions in the chat — the agent retrieves relevant chunks and generates grounded answers with citations
+
+---
 
 ## Architecture
-This app implements a standard RAG flow: documents are chunked, embedded, and
-stored in Chroma. A LangChain tool-calling agent retrieves relevant chunks and
-generates grounded answers with citations. The default chunking parameters are
-800/100 to preserve table structure while maintaining retrieval precision.
 
-Key decisions:
-- Chroma: lightweight, in-memory store for demo scope
-- all-MiniLM-L6-v2: free, local, strong on English text
-- RecursiveCharacterTextSplitter(800, 100): balances table integrity vs retrieval precision
-- create_tool_calling_agent: native function-calling with clean tool routing
-- OpenRouter: model-agnostic access with free GPT-4o-mini tier
+| Component | Choice | Rationale |
+|---|---|---|
+| Vector store | Chroma (in-memory) | Zero-config, Python-native; ideal for demos |
+| Embeddings | all-MiniLM-L6-v2 | Free, local, strong on English text |
+| Chunking | RecursiveCharacterTextSplitter (1667/100) | Broader context for conversational Q&A |
+| Retriever | Top-3 cosine similarity | Balances recall with context-window budget |
+| Agent | LangChain `create_tool_calling_agent` | Native function-calling, clean tool routing |
+| LLM proxy | OpenRouter | Model-agnostic access, free GPT-4o-mini tier |
+| Docker torch | CPU-only (`--index-url .../cpu`) | Keeps image ~2.7 GB (CUDA adds no benefit) |
 
-## API Reference
-FastAPI docs available at http://localhost:8000/docs
-
-## Known Limitations and Next Steps
-- Vector store is in-memory and resets on server restart; add persistence
-- Single-user only; add authentication and per-user collections
+See `architecture.pdf` for a detailed discussion of design decisions, trade-offs, and known limitations.
